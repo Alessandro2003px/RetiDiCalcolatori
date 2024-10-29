@@ -9,9 +9,10 @@ public class clientDir {
         InetAddress addr = null;
 		int port = -1;
 		int dimMin=0;
-        File dir=new File(args[2]);
+        File dir=null;
 		try{ //check args
 			if(args.length == 4){
+                 dir=new File(args[2]);
 				addr = InetAddress.getByName(args[0]);
 				port = Integer.parseInt(args[1]);
                 dimMin=Integer.parseInt(args[3]);
@@ -54,6 +55,7 @@ public class clientDir {
 
         }
 
+
         // creazione stream di input/output su socket
         try{
             inSock = new DataInputStream(socket.getInputStream());
@@ -76,7 +78,7 @@ public class clientDir {
                     if((dim=((int)file.length()))>dimMin){
 
                         try{
-                            inFile = new FileInputStream(file.getName());
+                            inFile = new FileInputStream(args[2]+file.getName());
                         }
                         
                         catch(FileNotFoundException e){
@@ -101,11 +103,14 @@ public class clientDir {
                         }
                             String res=inSock.readUTF();
                             if(res.equals("attiva")){
-                                outSock.writeLong(dim);
+                                System.out.println("Inviato file " + file.getName());
+
+                                outSock.writeInt(dim);
                                 FileUtility.trasferisci_a_byte_file_binario(new DataInputStream(inFile), outSock);
                                 inFile.close(); 
                             }
                             else if(res.equals("salta")){
+                                System.out.println("saltato file " + file.getName());
                                     continue;
                             }
                             else{
@@ -128,6 +133,7 @@ public class clientDir {
 
                 }
             }
+            System.out.println("chiusura socket");
             socket.close();
             
 
