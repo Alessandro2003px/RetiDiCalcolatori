@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
         .tv_sec=30
     };
 
-    if(setsockopt(sd,SOL_SOCKET,SO_RCvTIMEO, timeout, sizeof(&timeout))<0){    //setsockopt(sd,SOL_SOCKET,SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout))
+    if(setsockopt(sd,SOL_SOCKET,SO_RCVTIMEO, timeout, sizeof(timeout))<0){    //setsockopt(sd,SOL_SOCKET,SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout))
         perror("Timeout scaduto");
         exit(1);
     }
