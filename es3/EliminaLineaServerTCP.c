@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     int                listen_sd, conn_sd,count=0;
     int                port, len, num;
     char c;
-    unsigned int=numero_riga;
+    unsigned int numero_riga=0;
     const int          on = 1;
     struct sockaddr_in cliaddr, servaddr;
     struct hostent    *host;

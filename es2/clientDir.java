@@ -12,15 +12,18 @@ public class clientDir {
         File dir=null;
 		try{ //check args
 			if(args.length == 4){
-                 dir=new File(args[2]);
+                dir=new File(args[2]);
 				addr = InetAddress.getByName(args[0]);
 				port = Integer.parseInt(args[1]);
+                if (port < 1024 || port > 65535) {
+                    System.out.println("Usage: java MPutFileClient serverAddr serverPort dir minFileSize");
+                    System.exit(1);
+                }
                 dimMin=Integer.parseInt(args[3]);
-                if(!dir.isDirectory()){
+                if((!dir.exists())||(!dir.isDirectory())){
                     System.out.println("dir is not dir ");
                     System.exit(1);
                 }
-
 			} else{
 				System.out.println("Usage: java PutFileClient serverAddr serverPort direttorio dimMax");
 				System.exit(1);
@@ -44,103 +47,55 @@ public class clientDir {
             socket = new Socket(addr, port);
             socket.setSoTimeout(30000);
             System.out.println("Creata la socket: " + socket);
+            inSock = new DataInputStream(socket.getInputStream());
+            outSock = new DataOutputStream(socket.getOutputStream());
         }
         catch(Exception e){
             System.out.println("Problemi nella creazione della socket: ");
             e.printStackTrace();
-            System.out
-                .print("\n^D(Unix)/^Z(Win)+invio per uscire, oppure immetti nome file: ");
+            System.out.print("\n^D(Unix)/^Z(Win)+invio per uscire, oppure immetti nome file: ");
             // il client continua l'esecuzione riprendendo dall'inizio del ciclo
             System.exit(3);
-
         }
 
-
-        // creazione stream di input/output su socket
-        try{
-            inSock = new DataInputStream(socket.getInputStream());
-            outSock = new DataOutputStream(socket.getOutputStream());
-        }
-        catch(IOException e){
-            System.out
-                .println("Problemi nella creazione degli stream su socket: ");
-            e.printStackTrace();
-            System.out
-                .print("\n^D(Unix)/^Z(Win)+invio per uscire, oppure immetti nome file: ");            // il client continua l'esecuzione riprendendo dall'inizio del ciclo
-                System.exit(4);
-
-            }
             //Long.SIZE;
-                        int dim;
+            long dim;
             File[] listoFiles=dir.listFiles();
+            System.out.println("len: "+listoFiles.length);
             for(File file:listoFiles){
+                System.out.println("["+file.getName()+"]");
                 if(file.isFile()){
-                    if((dim=((int)file.length()))>dimMin){
-
-                        try{
-                            inFile = new FileInputStream(args[2]+file.getName());
-                        }
-                        
-                        catch(FileNotFoundException e){
-                            e.printStackTrace();
-                            socket.shutdownOutput();
-                            System.exit(5);
-
-                        } 
-
+                    if((dim=((long)file.length()))>dimMin){
                         try{
                             outSock.writeUTF(file.getName());
                             System.out.println("Inviato il nome del file " + file.getName());
-                        }
-                        catch(Exception e){
-                            System.out.println("Problemi nell'invio del nome di " + file.getName()
-                                + ": ");
-                            e.printStackTrace();
-                            System.out
-                                  .print("\n^D(Unix)/^Z(Win)+invio per uscire, oppure immetti nome file: ");
-                            socket.shutdownOutput();
-                            System.exit(5);
-                        }
                             String res=inSock.readUTF();
                             if(res.equals("attiva")){
                                 System.out.println("Inviato file " + file.getName());
-
-                                outSock.writeInt(dim);
+                                outSock.writeLong(dim);
+                                inFile = new FileInputStream(file.getAbsolutePath());
                                 FileUtility.trasferisci_a_byte_file_binario(new DataInputStream(inFile), outSock);
                                 inFile.close(); 
                             }
                             else if(res.equals("salta")){
                                 System.out.println("saltato file " + file.getName());
-                                    continue;
+                                continue;
                             }
                             else{
-                                System.out
-                                  .print("bad server");
+                                System.out.print("bad server");
+                                socket.shutdownOutput();
+                                System.exit(5);
+                            }
+                        }
+                        catch(Exception e){
+                            e.printStackTrace();
                             socket.shutdownOutput();
                             System.exit(5);
-                            }
-
-
-
-
-
-
-
+                        }
                     }
-
-
-
-
                 }
             }
             System.out.println("chiusura socket");
             socket.close();
-            
-
-
-
-
-
     }
-
 }
