@@ -8,7 +8,7 @@ public class rowSwap extends Thread{
     private DatagramSocket socket = null;
     private DatagramPacket packet = null;
     private byte[] buf = new byte[256];
-    private int port;
+    private int port = -1;
     private String filename;
     public rowSwap(String filename,int port){
             this.port=port;
@@ -29,20 +29,20 @@ public class rowSwap extends Thread{
 		}
 
         File file= new File(this.filename);
-                int numLinea1 = -1;
-                int numLinea2 = -1;
-			String richiesta = null;
-			ByteArrayInputStream biStream = null;
-			DataInputStream diStream = null;
-			StringTokenizer st = null;
-			ByteArrayOutputStream boStream = null;
-			DataOutputStream doStream = null;
-			String linea = null;
-			byte[] data = null;
-            String nomeFileRicevuto=null;
-            String dataSend=null;
+        int numLinea1 = -1;
+        int numLinea2 = -1;
+        String richiesta = null;
+        ByteArrayInputStream biStream = null;
+        DataInputStream diStream = null;
+        StringTokenizer st = null;
+        ByteArrayOutputStream boStream = null;
+        DataOutputStream doStream = null;
+        String linea = null;
+        byte[] data = null;
+        String nomeFileRicevuto=null;
+        String dataSend="errore";
+        BufferedReader userInput=null;
         while(true){
-
             try {
                 packet.setData(buf);
                 socket.receive(packet);
@@ -57,6 +57,7 @@ public class rowSwap extends Thread{
             }
 
             try{
+                // Estrazione prima e seconda riga da scambiare
                 biStream = new ByteArrayInputStream(packet.getData(), 0, packet.getLength());
 				diStream = new DataInputStream(biStream);
 				richiesta = diStream.readUTF();
@@ -67,103 +68,82 @@ public class rowSwap extends Thread{
                 System.out.println("l1="+numLinea1);
                 numLinea2 = Integer.parseInt(st.nextToken());
                 System.out.println("l2="+numLinea2);
-                
+                if(numLinea1<1 || numLinea2<1)
+                {
+                  dataSend="numlinea negativo";
+                }
             }
             catch(Exception e){
-            
                 dataSend="parsing fallito";
-                System.err.println(e);
-            }
-            if(numLinea1<1||numLinea2<1)
-            {          
-                  dataSend="numlinea negativo";
-            }
-        else{
-
-        
-            BufferedReader userInput=null;
-            try {
-                //FileInputStream inputStream=new FileInputStream(file);
-                userInput = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
-                
-            } catch (FileNotFoundException e) {
-                //  Auto-generated catch block
                 e.printStackTrace();
             }
-            int i=1;
-            String SString1=null,SString2=null;
 
-            try {
-                File fileout=new File(nomeFileRicevuto);
-                PrintWriter out = new PrintWriter(fileout);
-                
-                while((linea = userInput.readLine()) != null)   {
-                    if(i==numLinea1){
-                        SString1=linea;
+            if(!dataSend.equals("parsing fallito") ||
+            !dataSend.equals("numlinea negativo")){
+                try {
+                    userInput = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+
+                    int i=1;
+                    String SString1=null,SString2=null;
+                    File fileout=new File(nomeFileRicevuto);
+                    PrintWriter out=new PrintWriter(fileout);
+
+                    while((linea = userInput.readLine()) != null)   {
+                    // No EOF Exception con BufferedReader.readLine ma null se EOF raggiunto
+                        if(i==numLinea1)
+                            SString1=linea;
+                        else if(i==numLinea2)
+                            SString2=linea;
+                        i++;
                     }
-                    else if(i==numLinea2)
-                    SString2=linea;
-                    i++;
-                 
-                }
-                userInput.close();
-                userInput = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
-                if(numLinea1>=i||numLinea2>=i){
-                    dataSend="num linea non valido";
+                    userInput.close();
 
-                }
-                else{
-                    i=1;
-
-                 while((linea = userInput.readLine()) != null)   {
-                    if(i==numLinea1){
-                        out.println(SString2);
-                    }
-                    else if(i==numLinea2){
-                        out.println(SString1);
-
+                    if(SString1 == null && SString2 == null){
+                        dataSend="num linea non valido";
                     }
                     else{
-                        out.println(linea);
-                    }
-                    
-                    
-                    
-                    
-                    i++;
-                 }
-                 dataSend="positivo";
-                }
-                
+                        userInput = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+                        i=1;
+                        while((linea = userInput.readLine()) != null)   {
+                            if(i==numLinea1){
+                                out.println(SString2);
+                            }
+                            else if(i==numLinea2){
+                                out.println(SString1);
 
-                    out.flush();  // Flush data to the file before closing
-
+                            }
+                            else{
+                                out.println(linea);
+                            }
+                            i++;
+                        }
+                        out.flush();  // Flush data to the file before closing
                         out.close();
+                        dataSend="positivo";
+                    }
+                } catch (Exception e) {
+                    //  Auto-generated catch block
+                    e.printStackTrace();
+                    //se qualche eccezione verificatasi, comunque invio un esito di errore
+                }
+            }
 
-            } catch (IOException e) {
+            //invio risposta
+            try{
+                boStream = new ByteArrayOutputStream();
+                doStream = new DataOutputStream(boStream);
+                doStream.writeUTF(dataSend);
+                data = boStream.toByteArray();
+                packet.setData(data, 0, data.length);
+                socket.send(packet);
+                System.out.println("datatosend="+dataSend);
+            }
+            catch (IOException e) {
                 //  Auto-generated catch block
                 e.printStackTrace();
             }
         }
-        try{
-            boStream = new ByteArrayOutputStream();
-            doStream = new DataOutputStream(boStream);
-            doStream.writeUTF(dataSend);
-            data = boStream.toByteArray();
-            packet.setData(data, 0, data.length);
-            socket.send(packet);
-            System.out.println("datatosend="+dataSend);
-        }
-        catch (IOException e) {
-            //  Auto-generated catch block
-            e.printStackTrace();
-        }
-                    
-        }
-      
-
     }
-    
 }
 
 
