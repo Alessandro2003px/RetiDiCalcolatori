@@ -10,15 +10,20 @@
 #include <unistd.h>
 
 #define LENGTH_FILE_NAME 256
+/*typedef struct{
+    char file [150];
+    char parola [106];
+} messaggio;*/
 
 int main(int argc, char **argv)
 {
     struct hostent *host;
     struct sockaddr_in clientaddr, servaddr;
-    int sd, nread, port;
+    int sd, nread, port,i=0;
 
-    int len, esito,i;
+    int len, esito;
     char messaggio[LENGTH_FILE_NAME];
+   
 
     /* CONTROLLO ARGOMENTI ---------------------------------- */
     if (argc != 3)
@@ -83,25 +88,27 @@ int main(int argc, char **argv)
     printf("Client: bind socket ok, alla porta %i\n", clientaddr.sin_port);
 
     /* CORPO DEL CLIENT: */
-    printf("Nome file e parola da eliminare, separata da ',' oppure CTRL D per terminare: ");
+    printf("Nome file e parola da eliminare, separata da virgola oppure CTRL D per terminare: ");
 
     while (gets(messaggio) !=NULL)
     {
-       / for(i=0;i<strlen(messaggio);i++){
+        for(i=0;i<strlen(messaggio);i++){
             if(messaggio[i]==','){
                 messaggio[i]='\0';
+                i++;
                 break;
             }
         }
+        
         /* invio richiesta, ricordando di inviare sempre la dimensione MASSIMA dell'array di caratteri su una socket DATAGRAM */
         len = sizeof(servaddr);
-        if (sendto(sd, messaggio, LENGTH_FILE_NAME, 0, (struct sockaddr *)&servaddr, len) < 0)
+        if (sendto(sd, messaggio, strlen(messaggio)+strlen(&messaggio[i+1])+2, 0, (struct sockaddr *)&servaddr, len) < 0)
         {
             perror("scrittura socket");
-           // printf("Nome del file: ");
+            printf("Nome del file: ");
             continue; // se questo invio fallisce il client torna all'inzio del ciclo
         }
-
+        
         /* ricezione del risultato */
         printf("%s,%s",messaggio, &messaggio[i+1]);
         printf("\nAttesa del risultato...\n");
