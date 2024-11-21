@@ -248,13 +248,12 @@ int main(int argc, char **argv)
             parola[j] = '\0';
             printf("nome file: %s\n", nome_f);
             printf("parola da eliminare: %s\n", parola);
-            int ck=0;
             int fd=open(nome_f, O_RDONLY);
-            int ft = open("temp.txt", O_WRONLY);
+            int ft = open("temp.txt", O_WRONLY | O_CREAT, 0644);
             //int ft=open(nome_f, O_WRONLY);    //se si usa da aggiungere logica per cambiare lunghezza file
             if(fd<0) {
                 int num=-1;
-                perror("Errore apertura file lettura:");
+                perror("Errore apertura file lettura");
                 if (sendto(udpfd, &num, sizeof(num), 0, (struct sockaddr *)&cliaddr, len) < 0)
                 {
                     perror("sendto");
@@ -263,16 +262,19 @@ int main(int argc, char **argv)
                 continue;
             }
             if(ft<0) {
-                perror("Errore apertura file scrittura:");
+                perror("Errore apertura file scrittura");
                 continue;
             }
             i=0;
-            int count=0;
+            int count=0, ck=0, cmp, stop=0;
             char c, word[255];
-            while(read(fd, &c, 1)>0) {
-                if(c!=' ' || c != '\n') {
-                    if(i > strlen(word)) {
+            printf("Inizio ciclo di lettura\n");
+            while(read(fd, &c, 1)>0 && stop==0) {
+                printf("c: [%c]", c);
+                if(c!=' ' && c != '\n') {
+                    if(i > 255) {
                         write(ft, word, strlen(word));
+                        printf("parte di parola: %s\n", word);
                         i=0;
                         ck=1;
                     } else {
@@ -280,16 +282,22 @@ int main(int argc, char **argv)
                         i++;
                     }
                 } else {
-                    word[i+1]=0;
+                    printf("\nconfronto parola\n");
+                    word[i]='\0';
                     if((strcmp(word, parola) != 0) || (ck == 1)) {
+                        printf("scrivo su file: [%s]\n", word);
                         if(write(ft, word, strlen(word))<0) {
-                            perror("Errore scrittura : ");
+                            perror("Errore scrittura ");
+                            stop=1;
                             continue;
                         }
                         write(ft, &c, strlen(word));
                     }
-                    else
+                    else {
                         count++;
+                        if(c == '\n')
+                            write(ft, &c, strlen(word));
+                    }
                     i=0;
                     ck=0;
                 }
