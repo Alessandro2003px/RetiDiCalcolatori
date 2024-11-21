@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
         if (ok == 'S') {
             printf("Ricevo il direttorio:\n");
             while ((nread = read(sd,&carattere, sizeof(char))) > 0) {
-                if(carattere=='\0') carattere='\t';
+                if(carattere=='\0') carattere='\n';
 
                 if ((nwrite = write(1,&carattere, nread)) < 0) { // print on screen
                     perror("write");

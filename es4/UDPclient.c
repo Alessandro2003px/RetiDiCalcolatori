@@ -95,7 +95,6 @@ int main(int argc, char **argv)
         for(i=0;i<strlen(messaggio);i++){
             if(messaggio[i]==','){
                 messaggio[i]='\0';
-                i++;
                 break;
             }
         }

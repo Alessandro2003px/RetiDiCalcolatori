@@ -203,7 +203,8 @@ int main(int argc, char **argv)
                      while ((dd = readdir(dir)) != NULL)
                     {
                         buff=dd->d_name;
-                        write(connfd, buff, sizeof(buff));
+                        if(strcmp(buff, ".") == 0 || strcmp(buff, "..") == 0) continue;
+                        write(connfd, buff, strlen(buff) + 1);
                         count++;
                     }
                 }
@@ -214,11 +215,7 @@ int main(int argc, char **argv)
                 shutdown(connfd, 1);
                 close(connfd);
                 exit(0);
-            } // figlio-fork
-            /* padre chiude la socket dell'operazione */
-            /*shutdown(connfd,0);
-            shutdown(connfd,1);
-            close(connfd);*/
+            }
         } /* fine gestione richieste di file */
 
         /* GESTIONE RICHIESTE DI CONTEGGIO ------------------------------------------ */
@@ -248,12 +245,13 @@ int main(int argc, char **argv)
             parola[j] = '\0';
             printf("nome file: %s\n", nome_f);
             printf("parola da eliminare: %s\n", parola);
+            int ck=0;
             int fd=open(nome_f, O_RDONLY);
-            int ft = open("temp.txt", O_WRONLY | O_CREAT, 0644);
+            int ft = open("temp.txt", O_WRONLY | O_CREAT | O_TRUNC, 0777);
             //int ft=open(nome_f, O_WRONLY);    //se si usa da aggiungere logica per cambiare lunghezza file
             if(fd<0) {
                 int num=-1;
-                perror("Errore apertura file lettura");
+                perror("Errore apertura file lettura:");
                 if (sendto(udpfd, &num, sizeof(num), 0, (struct sockaddr *)&cliaddr, len) < 0)
                 {
                     perror("sendto");
@@ -262,45 +260,47 @@ int main(int argc, char **argv)
                 continue;
             }
             if(ft<0) {
-                perror("Errore apertura file scrittura");
-                continue;
+                perror("Errore apertura file scrittura:");
+                continue; //msg di errore anche qui
             }
             i=0;
-            int count=0, ck=0, cmp, stop=0;
+            int count=0;
             char c, word[255];
-            printf("Inizio ciclo di lettura\n");
-            while(read(fd, &c, 1)>0 && stop==0) {
-                printf("c: [%c]", c);
+            while(read(fd, &c, 1)>0) {
                 if(c!=' ' && c != '\n') {
-                    if(i > 255) {
+                    /*if(i > strlen(word)) { //???
                         write(ft, word, strlen(word));
-                        printf("parte di parola: %s\n", word);
                         i=0;
                         ck=1;
-                    } else {
+                    } else {*/
                         word[i] = c;
                         i++;
-                    }
+                    //}
                 } else {
-                    printf("\nconfronto parola\n");
-                    word[i]='\0';
-                    if((strcmp(word, parola) != 0) || (ck == 1)) {
-                        printf("scrivo su file: [%s]\n", word);
+                    word[i]=0;
+                    //printf("%s\n", word);
+                    if((strcmp(word, parola) != 0)/* || (ck == 1)*/) {
                         if(write(ft, word, strlen(word))<0) {
-                            perror("Errore scrittura ");
-                            stop=1;
+                            perror("Errore scrittura : ");
                             continue;
                         }
-                        write(ft, &c, strlen(word));
                     }
-                    else {
+                    else
                         count++;
-                        if(c == '\n')
-                            write(ft, &c, strlen(word));
-                    }
+                    write(ft, &c, 1);
                     i=0;
                     ck=0;
                 }
+            }
+            //renaming file
+            if(unlink(nome_f)<0) {
+                perror("Errore unlink : ");
+            }
+            if(link("temp.txt",nome_f)<0) {
+                perror("Errore link : ");
+            }
+            if(unlink("temp.txt")<0) {
+                perror("Errore unlink : ");
             }
             close(fd);
             close(ft);
@@ -309,18 +309,6 @@ int main(int argc, char **argv)
                 perror("sendto");
                 continue;
             }
-            /*
-             * Cosa accade se non commentiamo le righe di codice qui sotto?
-             * Cambia, dal punto di vista del tempo di attesa del client,
-             * l'ordine col quale serviamo le due possibili richieste?
-             * Cosa cambia se utilizziamo questa realizzazione, piuttosto
-             * che la prima?
-             *
-             */
-            /*
-            printf("Inizio sleep\n");
-            sleep(30);
-            printf("Fine sleep\n");*/
         } /* fine gestione richieste di conteggio */
 
     } /* ciclo for della select */
