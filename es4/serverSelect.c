@@ -15,11 +15,12 @@
 
 #define DIM_BUFF 100
 #define LENGTH_FILE_NAME 256
+#define DIM 250
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
 /*Funzione conteggio file in un direttorio*/
 /********************************************************/
-int conta_file(char *name)
+/*int conta_file(char *name)
 {
     DIR *dir;
     struct dirent *dd;
@@ -32,11 +33,11 @@ int conta_file(char *name)
         printf("Trovato il file %s\n", dd->d_name);
         count++;
     }
-    /*Conta anche direttorio stesso e padre*/
+    //Conta anche direttorio stesso e padre
     printf("Numero totale di file %d\n", count);
     closedir(dir);
     return count;
-}
+}*/
 /********************************************************/
 void gestore(int signo)
 {
@@ -182,7 +183,6 @@ int main(int argc, char **argv)
             if (fork() == 0)
             { /* processo figlio che serve la richiesta di operazione */
                 close(listenfd);
-                int n;
                 printf("Dentro il figlio, pid=%i\n", getpid());
                 /* non c'e' piu' il ciclo perche' viene creato un nuovo figlio */
                 /* per ogni richiesta di file */
@@ -191,31 +191,48 @@ int main(int argc, char **argv)
                     perror("read");
                     break;
                 }
-                DIR *dir;
-                struct dirent *dd;
-                int count = 0;
+                DIR *dir, *dir2;
+                struct dirent *dd, *dd2;
+                char t = name[strlen(name)-1];
                 dir = opendir(name);
-                char* buff;
+                if(t != '/')
+                    strcat(name, "/");
+                char* buff, *sup, *bello;
+                char base[LENGTH_FILE_NAME];
                 if(dir==NULL)
                     write(connfd, "N", 1);
                 else {
+                    strcpy(base, name);
                     write(connfd, "S", 1);
-                     while ((dd = readdir(dir)) != NULL)
+                    while ((dd = readdir(dir)) != NULL)
                     {
                         buff=dd->d_name;
-                        if(strcmp(buff, ".") == 0 || strcmp(buff, "..") == 0) continue;
-                        write(connfd, buff, strlen(buff) + 1);
-                        count++;
+                        write(connfd, buff, strlen(buff)+1);
+                        if(dd->d_type == 4 && (strcmp(buff,".")!=0) && (strcmp(buff,"..")!=0)) {
+                            sup = strcat(base, buff);
+                            dir2 = opendir(sup);
+                            while ((dd2 = readdir(dir2)) != NULL) {
+                                strcpy(bello, dd->d_name);
+                                buff=dd2->d_name;
+                                strcat(bello, "/");
+                                strcat(bello, buff);
+                                write(connfd, bello, strlen(bello)+1);
+                            }
+                            strcpy(base, name);
+                        }
                     }
                 }
-
                 /*la connessione assegnata al figlio viene chiusa*/
                 printf("Figlio %i: termino\n", getpid());
                 shutdown(connfd, 0);
                 shutdown(connfd, 1);
                 close(connfd);
                 exit(0);
-            }
+            } // figlio-fork
+            /* padre chiude la socket dell'operazione */
+            /*shutdown(connfd,0);
+            shutdown(connfd,1);
+            close(connfd);*/
         } /* fine gestione richieste di file */
 
         /* GESTIONE RICHIESTE DI CONTEGGIO ------------------------------------------ */
@@ -229,7 +246,7 @@ int main(int argc, char **argv)
                 perror("recvfrom");
                 continue;
             }
-            char nome_f[250], parola[250];
+            char nome_f[DIM], parola[DIM];
             int i=0, j=0;
             while(packet[i]!=0){
                 nome_f[i]=packet[i];
@@ -245,13 +262,12 @@ int main(int argc, char **argv)
             parola[j] = '\0';
             printf("nome file: %s\n", nome_f);
             printf("parola da eliminare: %s\n", parola);
-            int ck=0;
             int fd=open(nome_f, O_RDONLY);
-            int ft = open("temp.txt", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+            int ft = open("temp.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
             //int ft=open(nome_f, O_WRONLY);    //se si usa da aggiungere logica per cambiare lunghezza file
             if(fd<0) {
                 int num=-1;
-                perror("Errore apertura file lettura:");
+                perror("Errore apertura file lettura");
                 if (sendto(udpfd, &num, sizeof(num), 0, (struct sockaddr *)&cliaddr, len) < 0)
                 {
                     perror("sendto");
@@ -260,48 +276,58 @@ int main(int argc, char **argv)
                 continue;
             }
             if(ft<0) {
-                perror("Errore apertura file scrittura:");
-                continue; //msg di errore anche qui
+                perror("Errore apertura file scrittura");
+                continue;
             }
             i=0;
-            int count=0;
-            char c, word[255];
-            while(read(fd, &c, 1)>0) {
+            int count=0, ck=0, cmp, stop=0;
+            char c, word[DIM+5];
+            printf("Inizio ciclo di lettura\n");
+            while(read(fd, &c, 1)>0 && stop==0) {
                 if(c!=' ' && c != '\n') {
-                    /*if(i > strlen(word)) { //???
+                    if(i > DIM+5) {
                         write(ft, word, strlen(word));
                         i=0;
                         ck=1;
-                    } else {*/
+                    } else {
                         word[i] = c;
                         i++;
-                    //}
+                    }
                 } else {
-                    word[i]=0;
-                    //printf("%s\n", word);
-                    if((strcmp(word, parola) != 0)/* || (ck == 1)*/) {
+                    word[i]='\0';
+                    if((strcmp(word, parola) != 0) || (ck == 1)) {
                         if(write(ft, word, strlen(word))<0) {
-                            perror("Errore scrittura : ");
+                            perror("Errore scrittura ");
+                            stop=1;
+                            num = -2;
+                            if (sendto(udpfd, &num, sizeof(num), 0, (struct sockaddr *)&cliaddr, len) < 0)
+                            {
+                                perror("sendto");
+                                continue;
+                            }
                             continue;
                         }
+                        write(ft, &c, 1);
                     }
-                    else
+                    else {
                         count++;
-                    write(ft, &c, 1);
+                        if(c == '\n')
+                            write(ft, &c, 1);
+                    }
                     i=0;
                     ck=0;
                 }
             }
-            //renaming file
-            if(unlink(nome_f)<0) {
-                perror("Errore unlink : ");
-            }
-            if(link("temp.txt",nome_f)<0) {
-                perror("Errore link : ");
-            }
-            if(unlink("temp.txt")<0) {
-                perror("Errore unlink : ");
-            }
+            printf("Fine lettura\n");
+
+            if(unlink(nome_f) < 0)
+                perror("Errore unlink file originale: ");
+            if(link("temp.txt", nome_f) < 0)
+                perror("Errore link: ");
+            if(unlink("temp.txt") < 0)
+                perror("Errore unlink file temporaneo: ");
+
+
             close(fd);
             close(ft);
             if (sendto(udpfd, &count, sizeof(count), 0, (struct sockaddr *)&cliaddr, len) < 0)
@@ -309,6 +335,18 @@ int main(int argc, char **argv)
                 perror("sendto");
                 continue;
             }
+            /*
+             * Cosa accade se non commentiamo le righe di codice qui sotto?
+             * Cambia, dal punto di vista del tempo di attesa del client,
+             * l'ordine col quale serviamo le due possibili richieste?
+             * Cosa cambia se utilizziamo questa realizzazione, piuttosto
+             * che la prima?
+             *
+             */
+            /*
+            printf("Inizio sleep\n");
+            sleep(30);
+            printf("Fine sleep\n");*/
         } /* fine gestione richieste di conteggio */
 
     } /* ciclo for della select */
