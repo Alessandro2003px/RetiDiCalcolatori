@@ -208,7 +208,7 @@ int main(int argc, char **argv)
                     {
                         buff=dd->d_name;
                         write(connfd, buff, strlen(buff)+1);
-                        if(dd->d_type == 4 && (strcmp(buff,".")!=0) && (strcmp(buff,"..")!=0)) {
+                        if(dd->d_type == 4 && (strcmp(buff,".")!=0) && (strcmp(buff,"..")!=0)) {    //provare a sostituire 4 con "DT_DIR"
                             sup = strcat(base, buff);
                             dir2 = opendir(sup);
                             while ((dd2 = readdir(dir2)) != NULL) {
