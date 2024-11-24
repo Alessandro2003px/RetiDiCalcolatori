@@ -124,6 +124,11 @@ int main(int argc, char *argv[]) {
                     write(1, &carattere, 1);
                     i=0;
                 } else {
+                    /* da testare l'aggiunta dell'if
+                    if(i > 250) {
+                        write(1, word, strlen(word));
+                        i=0;
+                    }*/
                     word[i] = carattere;
                     i++;
                 }
