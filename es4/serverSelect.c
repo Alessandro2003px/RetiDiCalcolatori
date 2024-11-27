@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 
 #define DIM_BUFF 100
 #define LENGTH_FILE_NAME 256
@@ -193,11 +194,12 @@ int main(int argc, char **argv)
                 }
                 DIR *dir, *dir2;
                 struct dirent *dd, *dd2;
+                struct stat info;
                 char t = name[strlen(name)-1];
                 dir = opendir(name);
                 if(t != '/')
                     strcat(name, "/");
-                char* buff, *sup, *bello;
+                char* buff, sup[LENGTH_FILE_NAME], bello[LENGTH_FILE_NAME];
                 char base[LENGTH_FILE_NAME];
                 if(dir==NULL)
                     write(connfd, "N", 1);
@@ -207,18 +209,35 @@ int main(int argc, char **argv)
                     while ((dd = readdir(dir)) != NULL)
                     {
                         buff=dd->d_name;
+                        //questo scrive anche il nome del direttorio di secondo livello 
                         write(connfd, buff, strlen(buff)+1);
-                        if(dd->d_type == 4 && (strcmp(buff,".")!=0) && (strcmp(buff,"..")!=0)) {    //provare a sostituire 4 con "DT_DIR"
-                            sup = strcat(base, buff);
+
+			//ATTENZIONE : NON SI POSSONO FARE strcpy con semplici puntatori -> devi prima riservare
+			// un buffer in memoria (staticamente / dinamicamente)
+			strcpy(sup, base);
+                        strcat(sup, buff);
+                        printf("%s\n", sup);
+                        printf("k");
+                        fflush(stdout);
+                        if(stat(sup, &info) < 0){
+                        	perror("stat fault");
+                        	exit(10);
+                        }
+                        //S_ISDIR(stat.st_mode) == 1 dice se è direttorio o no
+                        if(S_ISDIR(info.st_mode) && (strcmp(buff,".")!=0) && (strcmp(buff,"..")!=0)) {
                             dir2 = opendir(sup);
+                            strcpy(sup, buff);
                             while ((dd2 = readdir(dir2)) != NULL) {
-                                strcpy(bello, dd->d_name);
+		                    printf("%s\n",sup);
+		                    printf("kkk");
                                 buff=dd2->d_name;
+				strcpy(bello, sup);
                                 strcat(bello, "/");
                                 strcat(bello, buff);
                                 write(connfd, bello, strlen(bello)+1);
                             }
-                            strcpy(base, name);
+
+                            //strcpy(base, name);
                         }
                     }
                 }
@@ -231,8 +250,8 @@ int main(int argc, char **argv)
             } // figlio-fork
             /* padre chiude la socket dell'operazione */
             /*shutdown(connfd,0);
-            shutdown(connfd,1);
-            close(connfd);*/
+            shutdown(connfd,1);*/
+            close(connfd);
         } /* fine gestione richieste di file */
 
         /* GESTIONE RICHIESTE DI CONTEGGIO ------------------------------------------ */

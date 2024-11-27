@@ -58,6 +58,7 @@ int main(int argc, char **argv)
         printf("Porta scorretta...");
         exit(2);
     }
+
     servaddr.sin_addr.s_addr = ((struct in_addr *)(host->h_addr))->s_addr;
     servaddr.sin_port = htons(port);
 
@@ -94,7 +95,6 @@ int main(int argc, char **argv)
         for(i=0;i<strlen(messaggio);i++){
             if(messaggio[i]==','){
                 messaggio[i]='\0';
-                i++;
                 break;
             }
         }
@@ -118,11 +118,9 @@ int main(int argc, char **argv)
             continue; // se questa ricezione fallisce il client torna all'inzio del ciclo
         }
 
-        if (esito == -1)
+        if (esito < 0)
         {
             printf("Il file passato  è scorretto o non esiste\n");
-        } else if (esito == -2) {
-            printf("Errore aggiornamento file lato server\n");
         }
         else
         {
