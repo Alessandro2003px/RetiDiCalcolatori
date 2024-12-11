@@ -58,14 +58,19 @@ class ClientCongresso {
 					for(String s : servizi){
 						System.out.println(s);
 					}
-					System.out.println("Quale servizio desideri brutto stronzo?");
-					if((service = stdIn.readLine()) != null){
-						ServerCongresso serverRMI = (ServerCongresso) registryRemoto.cerca(stdIn.readLine());
+					System.out.println("Quale servizio desideri?");
+					while((service = stdIn.readLine()) != null){
+						ServerCongresso serverRMI = (ServerCongresso) registryRemoto.cerca(service);
+						if(serverRMI == null){
+							System.out.println("Servizio " + service + " inesistente");
+							System.out.println("Quale servizio desideri?");
+							continue;
+						}
 						System.out.println("ClientRMI: Servizio \"" + service + "\" connesso");
 	
 						System.out.println("\nRichieste di servizio fino a fine file");
 	
-						System.out.print("Servizio (R=Registrazione, P=Programma del congresso): ");
+						System.out.println("Servizio (R=Registrazione, P=Programma del congresso), CTRL-D per tornare alla home: ");
 	
 						while ((service = stdIn.readLine()) != null) {
 	
@@ -112,7 +117,6 @@ class ClientCongresso {
 								else
 									System.out.println("Sessione piena: giornata" + g + " sessione " + sess);
 							} // R
-	
 							else if (service.equals("P")) {
 								int g = 0;
 								boolean ok = false;
@@ -132,11 +136,10 @@ class ClientCongresso {
 								serverRMI.programma(g).stampa();
 	
 							} // P
-	
 							else
 								System.out.println("Servizio non disponibile");
 	
-							System.out.print("Servizio (R=Registrazione, P=Programma del congresso): ");
+							System.out.println("Servizio (R=Registrazione, P=Programma del congresso), CTRL-D per tornare alla home: ");
 						}// !EOF richieste utente
 					}
 				}

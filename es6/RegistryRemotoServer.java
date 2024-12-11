@@ -9,7 +9,7 @@
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-public interface RegistryRemotoServer extends RegistryRemotoClient {
+public interface RegistryRemotoServer extends RegistryRemotoClient{
 	public boolean aggiungi(String nomeLogico, Remote riferimento) throws RemoteException;
 
 	public Object[][] restituisciTutti() throws RemoteException;

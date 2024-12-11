@@ -4,17 +4,16 @@
  *	Metodi descritti nelle interfacce.  
  */
 import java.util.ArrayList;
-import java.rmi.Naming;
+//import java.rmi.Naming;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+//import java.rmi.RMISecurityManager;
 
 public class RegistryRemotoImpl extends UnicastRemoteObject implements RegistryRemotoServer {
 	ArrayList<String> tags = new ArrayList<String>();
 	// num. entry [nomelogico][ref]
 	final int tableSize = 100;
-	final int tot = 200;
-	Object[][] tagTable = new Object[tot][2];
 	// Tabella: la prima colonna contiene i nomi, la seconda i riferimenti remoti
 	Object[][] table = new Object[tableSize][2];
 
@@ -24,13 +23,6 @@ public class RegistryRemotoImpl extends UnicastRemoteObject implements RegistryR
 			table[i][0] = null;
 			table[i][1] = null;
 		}
-		for(int i=0; i<tot; i++) {
-			tagTable[i][0] = null;
-			tagTable[i][1] = null;
-		}
-		tags.add("Congresso");
-		tags.add("Programma");
-		tags.add("Matematica");
 	}
 
 	/** Aggiunge la coppia nella prima posizione disponibile */
@@ -124,61 +116,5 @@ public class RegistryRemotoImpl extends UnicastRemoteObject implements RegistryR
 				table[i][1] = null;
 			}
 		return risultato;
-	}
-	public String[] cercaTag(String tag) throws RemoteException {
-		int cont = 0;
-		if (tag == null)
-			return new String[0];
-		for (int i = 0; i < tableSize; i++)
-			if (table[i][0] != null && tag.equals((String) table[i][1]))
-				cont++;
-		String[] risultato = new String[cont];
-		// Ora lo uso come indice per il riempimento
-		cont = 0;
-		for (int i = 0; i < tableSize; i++)
-			if (table[i][0] != null && tag.equals((String) table[i][1]))
-				risultato[cont++] = (String) table[i][0];
-		return risultato;
-	}
-
-	// Avvio del Server RMI
-	public static void main(String[] args) {
-
-		int registryRemotoPort = 1099;
-		String registryRemotoHost = "localhost";
-		String registryRemotoName = "RegistryRemoto";
-
-		// Controllo dei parametri della riga di comando
-		if (args.length != 0 && args.length != 1) {
-			System.out.println("Sintassi: ServerImpl [registryPort]");
-			System.exit(1);
-		}
-		if (args.length == 1) {
-			try {
-				registryRemotoPort = Integer.parseInt(args[0]);
-			} catch (Exception e) {
-				System.out.println("Sintassi: ServerImpl [registryPort], registryPort intero");
-				System.exit(2);
-			}
-		}
-
-		// Impostazione del SecurityManager
-		/*if (System.getSecurityManager() == null)
-			System.setSecurityManager(new RMISecurityManager());
-*/
-		// Registrazione del servizio RMI
-		String completeName = "//" + registryRemotoHost + ":" + registryRemotoPort
-				+ "/" + registryRemotoName;
-		try {
-			RegistryRemotoImpl serverRMI = new RegistryRemotoImpl();
-			Naming.rebind(completeName, serverRMI);
-			System.out.println("Server RMI: Servizio \"" + registryRemotoName
-					+ "\" registrato");
-		} catch (Exception e) {
-			System.err.println("Server RMI \"" + registryRemotoName + "\": "
-					+ e.getMessage());
-			e.printStackTrace();
-			System.exit(1);
-		}
 	}
 }

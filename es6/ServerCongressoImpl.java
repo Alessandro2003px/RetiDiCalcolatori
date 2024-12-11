@@ -87,10 +87,15 @@ public class ServerCongressoImpl extends UnicastRemoteObject implements
         + registryRemotoPort + "/" + registryRemotoName;
 
     try {
-      RegistryRemotoServer registryRemoto = (RegistryRemotoServer) Naming
+      RegistryRemotoTagServer registryRemoto = (RegistryRemotoTagServer) Naming
           .lookup(completeRemoteRegistryName);
       ServerCongressoImpl serverRMI = new ServerCongressoImpl();
       registryRemoto.aggiungi(serviceName, serverRMI);
+      if(registryRemoto.associaTag(serviceName, "Congresso"))
+        System.out.println("Tag Congresso associato a " + serviceName);
+      else{
+        System.out.println("Associazione Tag Congresso a " + serviceName + " fallita");
+      }
       System.out.println("Server RMI: Servizio \"" + serviceName
           + "\" registrato");
     } catch (Exception e) {
